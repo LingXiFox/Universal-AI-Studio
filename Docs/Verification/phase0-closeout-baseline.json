@@ -1,0 +1,56 @@
+{
+  "date": "2026-10-15",
+  "source_commit": "1bad9a13859dda120497780a66295519373859ff",
+  "status": "measured",
+  "minimum_macos": "26.2",
+  "runs": [
+    {
+      "configuration": "release",
+      "macos": "27.2",
+      "architecture": "arm64",
+      "startup_to_root_view_ms": 124.26,
+      "warmup_seconds": 5,
+      "sample_seconds": 30.34,
+      "rss_median_mib": 124.26,
+      "rss_max_mib": 124.34,
+      "cpu_mean_percent_one_core": 0.1,
+      "hardware_model": "Mac17,4",
+      "memory_bytes": 34359738368,
+      "macos_build": "26B5112a",
+      "xcode": "Xcode 27.2\nBuild version 27B5028f",
+      "swift": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.2.0"
+    },
+    {
+      "configuration": "release",
+      "macos": "27.2",
+      "architecture": "arm64",
+      "startup_to_root_view_ms": 112.85,
+      "warmup_seconds": 5,
+      "sample_seconds": 30.34,
+      "rss_median_mib": 96.91,
+      "rss_max_mib": 129.3,
+      "cpu_mean_percent_one_core": 0.1,
+      "hardware_model": "Mac17,4",
+      "memory_bytes": 34359738368,
+      "macos_build": "26B5112a",
+      "xcode": "Xcode 27.2\nBuild version 27B5028f",
+      "swift": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.2.0"
+    },
+    {
+      "configuration": "release",
+      "macos": "27.2",
+      "architecture": "arm64",
+      "startup_to_root_view_ms": 113.74,
+      "warmup_seconds": 5,
+      "sample_seconds": 30.34,
+      "rss_median_mib": 96.97,
+      "rss_max_mib": 129.45,
+      "cpu_mean_percent_one_core": 0.1,
+      "hardware_model": "Mac17,4",
+      "memory_bytes": 34359738368,
+      "macos_build": "26B5112a",
+      "xcode": "Xcode 27.2\nBuild version 27B5028f",
+      "swift": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.2.0"
+    }
+  ]
+}

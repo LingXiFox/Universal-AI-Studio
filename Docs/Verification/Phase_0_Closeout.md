@@ -14,14 +14,29 @@
 
 私有仓库：[LingXiFox/Universal-AI-Studio](https://github.com/LingXiFox/Universal-AI-Studio)。工作流：[Phase 0 CI](https://github.com/LingXiFox/Universal-AI-Studio/actions/workflows/ci.yml)。
 
-状态：工作流已配置，正在进行第一次远程运行验收；运行成功之前不标记通过。最终 commit、运行链接、结果和测试报告将在实际结果返回后补充。
+**实际远程验收通过：** [CI run 38678956260](https://github.com/LingXiFox/Universal-AI-Studio/actions/runs/38678956260)，对应源码 commit `e1945daea935ed493d0a44bc47d6f26ba36583b2`，由 Push 自动触发，结论 `success`。
+
+| 远程检查 | 实测 |
+|---|---|
+| Runner | macOS 26.6.2（25G83），Darwin arm64，全新 checkout，无旧 `.build` |
+| 稳定工具链 | Xcode 26.6（17F113），Swift 6.3.3，macOS SDK 26.5 |
+| 干净依赖解析 | `swift package resolve` 成功，无缓存恢复，当前零第三方依赖 |
+| Python 单元测试 | 6 项通过、0 失败、0 跳过 |
+| Swift XCTest | 2 项通过、0 失败、0 跳过；下载后的 XCTest XML 确认有 2 个实际 testcase |
+| Debug App | 构建／签名／bundle 检查通过，仅 arm64，plist 与 Mach-O minos 均 26.2 |
+| Release App | 构建／签名／bundle 检查通过，仅 arm64，plist 与 Mach-O minos 均 26.2 |
+| 结果归档 | Summary、测试日志、真实 XCTest XML、bundle JSON 与两种 App tar 包上传成功，保留 14 天 |
+
+第一次运行 `38678723466` 的构建与测试虽通过，稳定 SwiftPM 却只生成了 0 用例的 Swift Testing XML；它不作为最终报告验收依据。已依据上游确认的问题改用 `--parallel --num-workers 2`，并要求 XCTest 报告包含实际 testcase；空报告拒绝检查也已在本地做正反向验证。修正后的第二次远程运行及下载报告均通过。未采用 Swift Testing 的额外 XML 仍可能为 0，不将其计为额外测试。
+
+工作流配置已启用 Push 和 Pull Request，支持手动触发；本轮实际验证的是 Push 事件，没有为了验收另建占位 PR。测试步骤或构建失败会保留失败结论；归档步骤使用 `always()`，不会把先前失败变成成功。
 
 ## 测试边界
 
 | 类别 | 当前状态 |
 |---|---|
 | 本地当前适用单元测试 | 8 项通过，0 失败，0 跳过 |
-| 远程当前适用单元测试 | 等待实际 CI 结果 |
+| 远程当前适用单元测试 | 8 项通过，0 失败，0 跳过 |
 | 模型管理／元数据解析 | 尚未覆盖，模块未实现 |
 | 下载器／下载任务 | 尚未覆盖，模块未实现 |
 | 任务状态／资源规则／API 协议 | 尚未覆盖，模块未实现 |
@@ -33,6 +48,20 @@
 
 ## 性能与硬件边界
 
-最初的三轮 [Phase 0 基线](Phase_0_Local.md) 保留不变。本轮同一实体 Mac 上的 Release 复测数据将在采样完成后追加；不使用共享 Runner 的耗时作为正式性能结论。模型加载／卸载、推理吞吐量和卸载后资源释放因后端未实现而未执行。
+最初的三轮 [Phase 0 基线](Phase_0_Local.md) 保留不变。本轮在同一实体 Mac17,4／32 GiB／macOS 27.2 build 26B5112a／Xcode 27.2 beta／Swift 6.4 上以 Release 重复三轮，每轮预热 5 秒、采样约 30 秒。[完整新测量数据](phase0-closeout-baseline.json) 包含工具链与每轮数值，对应 App 源码 commit `1bad9a13859dda120497780a66295519373859ff`。
+
+| 轮次 | 启动至根视图 ms | 采样 s | RSS 中位数 MiB | RSS 最大值 MiB | CPU %（一颗核心） |
+|---|---:|---:|---:|---:|---:|
+| 1 | 124.26 | 30.34 | 124.26 | 124.34 | 0.10 |
+| 2 | 112.85 | 30.34 | 96.91 | 129.30 | 0.10 |
+| 3 | 113.74 | 30.34 | 96.97 | 129.45 | 0.10 |
+| 本轮中位数 | 113.74 | 30.34 | 96.97 | 129.30 | 0.10 |
+| 初始基线中位数 | 153.07 | 30.33 | 128.34 | 128.48 | 0.10 |
+
+窗口状态、系统缓存和内存回收未严格固定，因此这是观察对照，不据此宣称性能提升，也未设虚构通过阈值。启动指标仍不是第一帧；RSS 不等于物理 footprint。不使用共享 Runner 的耗时作为正式性能结论。模型加载／卸载、推理吞吐量和卸载后资源释放因后端未实现而未执行。
 
 仍需真实硬件验收：精确 macOS 26.2 系统的安装／启动／权限行为，后续后端 GPU、取消／异常／释放，以及各模态真实模型、不同内存档位和长期稳定性。CI 产物声明 26.2 不等于这些实机路径已经通过。
+
+## 收尾结论
+
+本轮 Phase 0 的 macOS 26.2 arm64 部署配置、稳定工具链远程构建、当前适用测试、真实产物检查与报告归档已通过。可以推进 Phase 1；以上真实硬件／推理项目保持未执行或尚未覆盖，不算作已通过，也不等待大型模型来阻塞后续框架开发。
