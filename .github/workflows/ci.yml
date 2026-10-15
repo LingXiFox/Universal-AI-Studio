@@ -63,7 +63,9 @@ jobs:
       - name: Run all Swift unit tests
         id: swift
         if: ${{ !cancelled() && steps.resolve.outcome == 'success' }}
-        run: swift test --xunit-output .tmp/reports/swift-tests.xml 2>&1 | tee .tmp/ci/swift-tests.log
+        run: |
+          swift test --parallel --num-workers 2 --xunit-output .tmp/reports/swift-tests.xml 2>&1 | tee .tmp/ci/swift-tests.log
+          test "$(/usr/bin/xmllint --xpath 'count(//testcase)' .tmp/reports/swift-tests.xml)" -gt 0
 
       - name: Build and verify Debug App
         id: debug

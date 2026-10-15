@@ -26,7 +26,7 @@ CI 使用全新 `macos-26` arm64 Runner 和干净 checkout，不恢复 SwiftPM �
 
 1. 检查 Runner 是 macOS 26／arm64，选定稳定 Xcode 26.6，记录 OS／Swift／SDK；构建目录不得事先存在。
 2. `swift package resolve`，当前依赖清单为空，但解析步骤仍须真实执行。
-3. 执行所有 Python unittest 和所有 Swift XCTest；Swift 输出 xUnit XML，Python 输出逐项状态和总数。
+3. 执行所有 Python unittest 和所有 Swift 测试；Swift 使用 `--parallel --num-workers 2` 输出 XCTest xUnit XML，并检查报告确实含 test case，Python 输出逐项状态和总数。未采用 Swift Testing 的工程可能额外出现 0 用例的 Swift Testing XML，不将它作为 XCTest 的结果。
 4. 分别构建 Debug／Release，并检查真实 App 可执行文件、签名、bundle 类型与架构。
 5. 同时核对 Package.swift、Info.plist 的 `LSMinimumSystemVersion` 和 Mach-O `LC_BUILD_VERSION.minos`，三者必须都是 26.2；二进制只能包含 arm64。
 6. 无论成功或失败，上传运行日志、xUnit、bundle 检查 JSON 和已成功生成的 App tar 包，保留 14 天。写入 Summary 的步骤结果与 GitHub outcome 一致。
@@ -134,3 +134,4 @@ mkdir -p .tmp
 - [macOS 26 arm64 镜像与 Xcode 清单](https://github.com/actions/runner-images/blob/main/images/macos/macos-26-arm64-Readme.md)
 - [actions/checkout](https://github.com/actions/checkout) 与 [actions/upload-artifact](https://github.com/actions/upload-artifact)：使用已核查的固定 commit，不引入本地依赖。
 - [SwiftPM 测试命令实现与 xUnit 支持](https://github.com/swiftlang/swift-package-manager/blob/main/Sources/Commands/SwiftTestCommand.swift)
+- [SwiftPM 已确认的 XCTest XML 并行模式限制](https://github.com/swiftlang/swift-package-manager/issues/9961)：因此显式开启并行并检查非空测试报告。
