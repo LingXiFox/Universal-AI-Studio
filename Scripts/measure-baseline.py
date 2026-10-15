@@ -75,4 +75,12 @@ if __name__ == "__main__":
     executable = Path(__file__).resolve().parents[1] / "dist/release/Universal AI Studio.app/Contents/MacOS/UniversalAIStudio"
     if not executable.is_file():
         parser.error("Build the Release app first: bash Scripts/build-app.sh release")
-    print(json.dumps(measure(executable, args.seconds), indent=2))
+    result = measure(executable, args.seconds)
+    result.update({
+        "hardware_model": subprocess.check_output(["/usr/sbin/sysctl", "-n", "hw.model"], text=True).strip(),
+        "memory_bytes": int(subprocess.check_output(["/usr/sbin/sysctl", "-n", "hw.memsize"], text=True)),
+        "macos_build": subprocess.check_output(["/usr/bin/sw_vers", "-buildVersion"], text=True).strip(),
+        "xcode": subprocess.check_output(["xcodebuild", "-version"], text=True).strip(),
+        "swift": subprocess.check_output(["swift", "--version"], text=True).strip(),
+    })
+    print(json.dumps(result, indent=2))

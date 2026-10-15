@@ -1,6 +1,8 @@
 # Universal AI Studio
 
-面向 Apple Silicon 的 macOS 原生多模态本地 AI 工作台。目前仅完成开发工程初始化，模型管理、下载、推理、Agent 和 API 尚未实现。
+面向 **macOS 26.2+、Apple Silicon（仅 arm64）** 的原生多模态本地 AI 工作台。目前仅完成开发工程初始化，模型管理、下载、推理、Agent 和 API 尚未实现。不再支持 macOS 14／15／26.0／26.1。
+
+优先使用稳定 Xcode；常规 [GitHub Actions CI](https://github.com/LingXiFox/Universal-AI-Studio/actions/workflows/ci.yml) 在 `macos-26` arm64 Runner 使用稳定 Xcode 26.6，Push／Pull Request 自动触发。macOS 27 在真实本机持续做兼容验证。
 
 ## 开发入口
 
@@ -26,5 +28,7 @@ bash Scripts/build-app.sh release
 - [开发环境](Docs/Development_Environment.md)：版本、命令、验证边界和日常工作方式。
 - [分步实施与验收](Docs/Implementation_Plan.md)：每一步做什么、如何验收、保留什么证据。
 - [Phase 0 本地验收记录](Docs/Verification/Phase_0_Local.md)：本机实测结果与尚未验证的项目。
+- [分层测试与 CI](Docs/Testing.md)：Level 1–4、失败报告、真实硬件与性能验收边界。
+- [Phase 0 收尾记录](Docs/Verification/Phase_0_Closeout.md)：部署目标与实际远程 CI 结果。
 
 `dist/`、`.build/`、`.tmp/` 均为可再生成内容，不提交 Git。没有模型下载、后台服务或外部运行时自动安装行为。

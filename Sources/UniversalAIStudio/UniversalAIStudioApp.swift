@@ -1,5 +1,9 @@
 import SwiftUI
 
+#if !arch(arm64)
+#error("Universal AI Studio supports Apple Silicon (arm64) only.")
+#endif
+
 @main
 struct UniversalAIStudioApp: App {
     var body: some Scene {

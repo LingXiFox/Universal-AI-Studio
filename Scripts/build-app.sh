@@ -21,4 +21,7 @@ cp Resources/Info.plist "$app/Contents/Info.plist"
 /usr/bin/plutil -lint "$app/Contents/Info.plist"
 /usr/bin/codesign --force --sign - "$app"
 /usr/bin/codesign --verify --strict "$app"
+mkdir -p .tmp/reports
+/usr/bin/python3 Scripts/verify-app.py "$app" > ".tmp/reports/bundle-$configuration.json"
+cat ".tmp/reports/bundle-$configuration.json"
 echo "Built: $app"

@@ -3,7 +3,10 @@ import PackageDescription
 
 let package = Package(
     name: "UniversalAIStudio",
-    platforms: [.macOS(.v14)],
+    platforms: [.macOS("26.2")],
     products: [.executable(name: "UniversalAIStudio", targets: ["UniversalAIStudio"])],
-    targets: [.executableTarget(name: "UniversalAIStudio")]
+    targets: [
+        .executableTarget(name: "UniversalAIStudio"),
+        .testTarget(name: "UniversalAIStudioTests", path: "Tests/UniversalAIStudioTests")
+    ]
 )

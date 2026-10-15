@@ -6,7 +6,7 @@
 
 | 项目 | 当前方案 | 边界 |
 |---|---|---|
-| 平台 | macOS、Apple Silicon；部署声明 macOS 14.0+ | 仅本机 macOS 27.2 实测，最低系统尚未验证 |
+| 平台 | macOS 26.2+，仅 Apple Silicon arm64 | macOS 26.2 为正式最低要求；macOS 27 保持独立兼容验证 |
 | 语言 | Swift 6 language mode；manifest tools version 6.0 | Swift 6.0 是工程下限声明，不代表已在该版本验收 |
 | UI | SwiftUI；后续必要时 AppKit | 当前只有真实可启动的初始化窗口 |
 | 工程 | Swift Package Manager executable target | 暂不建立第二套 Xcode 工程配置 |
@@ -31,7 +31,7 @@
 | Git | 2.56.0 |
 | 脚本 Python | `/usr/bin/python3` 3.9.6 |
 
-本机是 beta 工具链。本次不切换系统 `xcode-select`，不安装其他 SDK／编译器；稳定 Xcode 和目标最低 macOS 的兼容性需要另行实测。
+本机只有 beta 工具链，用于 macOS 27 兼容验证。不切换系统 `xcode-select`，不安装其他 SDK／编译器。常规 CI 固定稳定 Xcode 26.6；其他机器优先选择已安装的稳定 Xcode，通过单条命令的 `DEVELOPER_DIR` 指定。macOS 14／15／26.0／26.1 已移出支持范围。
 
 ## 3. 在另一台 Mac 准备环境
 
@@ -48,7 +48,7 @@ git --version
 /usr/bin/python3 --version
 ```
 
-预期：Darwin arm64，Swift 至少 6.0，有 macOS SDK，`xcodebuild` 可正常输出版本，系统 Python 可运行 unittest。只有 Command Line Tools 或版本满足不能替代真实构建验收。若选择另一套已安装 Xcode，可在单条命令前设置 `DEVELOPER_DIR`，无需修改全局配置。
+预期：macOS 26.2+、Darwin arm64，稳定 Xcode 优先，Swift 至少 6.0，macOS SDK 不低于 26.2，系统 Python 可运行 unittest。只有 Command Line Tools 或版本满足不能替代真实构建验收。若选择另一套已安装 Xcode，可在单条命令前设置 `DEVELOPER_DIR`，无需修改全局配置。
 
 将项目放入本地可写目录后，在根目录执行：
 
@@ -57,7 +57,7 @@ bash Scripts/check.sh
 open "dist/debug/Universal AI Studio.app"
 ```
 
-验收：4 项开发工具测试通过，Debug／Release 各构建并生成 App，plist 和 ad-hoc 签名验证通过，二进制是 arm64；窗口显示“开发环境已就绪”和功能尚未实现的提示，窗口缩放正常，Command-Q 后 App 进程消失。
+验收：6 项 Python 工具测试与 2 项 Swift 配置测试通过，Debug／Release 各构建并生成 App，plist 和 ad-hoc 签名验证通过；二进制仅含 arm64，Package.swift、plist 与 Mach-O 的最低系统版本均为 26.2；窗口显示“开发环境已就绪”和功能尚未实现的提示，窗口缩放正常，Command-Q 后 App 进程消失。
 
 ## 4. 目录与操作约定
 
@@ -68,7 +68,10 @@ Resources/Info.plist                  App bundle 元数据
 Scripts/build-app.sh                 构建、打包、ad-hoc 签名
 Scripts/check.sh                     无交互的本地／CI 检查入口
 Scripts/measure-baseline.py          Release 启动与空闲采样
+Scripts/verify-app.py                manifest／plist／Mach-O／架构／签名检查
 Tests/test_development_tools.py      开发脚本回归测试
+Tests/UniversalAIStudioTests/        Swift 配置契约测试
+.github/workflows/ci.yml             macOS 26 arm64 远程 CI
 Docs/AA/                            原始产品计划，保持原文
 Docs/Verification/                  人工与真实运行验收记录
 dist/{debug,release}/                可再生成的 App
@@ -80,7 +83,7 @@ dist/{debug,release}/                可再生成的 App
 
 ## 5. 检查与性能口径
 
-`bash Scripts/check.sh` 运行 shell 语法检查、4 项 Python 工具测试、Debug／Release 构建、bundle 校验、arm64 检查和 `git diff --check`。当前没有 Swift 业务逻辑测试；后续新增业务逻辑时建立 Swift test target 并将 `swift test` 加入该入口，不创建空测试凑数。
+`bash Scripts/check.sh` 运行依赖解析、shell 语法检查、全部 Python unittest、全部 Swift XCTest、Debug／Release 构建与真实 bundle 校验，以及工作区／暂存区差异检查。`verify-app.py` 同时读取真实 Mach-O `LC_BUILD_VERSION.minos`、Info.plist 与解析后的 Package.swift；只改 plist 无法通过。报告保存在 `.tmp/reports/`。当前 Swift 测试覆盖真实配置，模型管理／下载／任务／API 模块尚未实现，相关业务测试在 CI Summary 标为尚未覆盖；四层测试规则见 [分层测试](Testing.md)。
 
 性能记录使用 Release，不将 Debug 与 Release 混比：
 
@@ -100,7 +103,7 @@ mkdir -p .tmp
 
 ## 6. CI 与发布边界
 
-本次建立了可由 CI 调用的本地检查入口；尚未选定远端仓库，也未配置或执行托管 CI。接入 CI 时使用 Apple Silicon macOS runner，输出 Xcode／Swift／SDK 版本后执行 `bash Scripts/check.sh`。选择平台、引入外部 action 或开通服务前先取得许可；首次远端成功运行是独立验收条件。
+GitHub 私有仓库为 `LingXiFox/Universal-AI-Studio`，已获许可使用 GitHub Actions。工作流在 Push／Pull Request 自动触发，使用 `macos-26` arm64 Runner 与稳定 Xcode 26.6；不恢复缓存，先解析依赖，再执行全部当前适用单元测试与 Debug／Release 构建。日志、xUnit、bundle JSON 和 App tar 包无论成功或失败均尝试保留 14 天。测试失败会让工作流失败，不用 `continue-on-error` 隐藏。实际运行链接及状态以 [收尾记录](Verification/Phase_0_Closeout.md) 为准。
 
 GUI 启动退出、真实模型、故障恢复和性能验收不能由编译结果代替；无桌面的 CI 不应声称完成 GUI 验收。当前 App 的 ad-hoc 签名仅供本地开发，不能作为跨机器发行包。
 

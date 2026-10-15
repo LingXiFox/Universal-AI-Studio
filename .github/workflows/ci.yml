@@ -1,0 +1,127 @@
+name: Phase 0 CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  level-1:
+    name: macOS 26 arm64 / Level 1
+    runs-on: macos-26
+    timeout-minutes: 20
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+      PYTHONDONTWRITEBYTECODE: "1"
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Clean checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Verify runner and stable toolchain
+        id: environment
+        run: |
+          mkdir -p .tmp/ci .tmp/reports
+          {
+            uname -sm
+            sw_vers
+            xcodebuild -version
+            swift --version
+            xcrun --show-sdk-version
+            /usr/bin/python3 --version
+            test "$(uname -m)" = arm64
+            test "$(sw_vers -productVersion | cut -d. -f1)" = 26
+            test "$(xcodebuild -version | head -n 1)" = "Xcode 26.6"
+            test ! -d .build
+          } 2>&1 | tee .tmp/ci/environment.log
+
+      - name: Resolve dependencies without restored caches
+        id: resolve
+        run: swift package resolve 2>&1 | tee .tmp/ci/resolve.log
+
+      - name: Check scripts and source formatting
+        id: format
+        run: |
+          {
+            for script in Scripts/*.sh; do bash -n "$script"; done
+            git diff --check
+            git diff --cached --check
+          } 2>&1 | tee .tmp/ci/format.log
+
+      - name: Run all Python development and artifact tests
+        id: python
+        if: ${{ !cancelled() && steps.environment.outcome == 'success' }}
+        run: /usr/bin/python3 -m unittest discover -s Tests -p 'test_*.py' -v 2>&1 | tee .tmp/ci/python-tests.log
+
+      - name: Run all Swift unit tests
+        id: swift
+        if: ${{ !cancelled() && steps.resolve.outcome == 'success' }}
+        run: swift test --xunit-output .tmp/reports/swift-tests.xml 2>&1 | tee .tmp/ci/swift-tests.log
+
+      - name: Build and verify Debug App
+        id: debug
+        if: ${{ !cancelled() && steps.resolve.outcome == 'success' }}
+        run: |
+          bash Scripts/build-app.sh debug 2>&1 | tee .tmp/ci/debug.log
+          tar -czf .tmp/ci/UniversalAIStudio-debug.tar.gz -C dist/debug 'Universal AI Studio.app'
+
+      - name: Build and verify Release App
+        id: release
+        if: ${{ !cancelled() && steps.resolve.outcome == 'success' }}
+        run: |
+          bash Scripts/build-app.sh release 2>&1 | tee .tmp/ci/release.log
+          tar -czf .tmp/ci/UniversalAIStudio-release.tar.gz -C dist/release 'Universal AI Studio.app'
+
+      - name: Record results and uncovered capabilities
+        if: always()
+        run: |
+          mkdir -p .tmp/ci
+          cat > .tmp/ci/summary.md <<'REPORT'
+          # Phase 0 CI results
+
+          | Check | Outcome |
+          |---|---|
+          | Runner and stable Xcode | ${{ steps.environment.outcome }} |
+          | Clean dependency resolution | ${{ steps.resolve.outcome }} |
+          | Shell and formatting checks | ${{ steps.format.outcome }} |
+          | Python unit tests | ${{ steps.python.outcome }} |
+          | Swift unit tests | ${{ steps.swift.outcome }} |
+          | Debug build and real bundle verification | ${{ steps.debug.outcome }} |
+          | Release build and real bundle verification | ${{ steps.release.outcome }} |
+
+          success = passed; failure = failed; skipped = not executed, never passed.
+          Exact test counts, failures and skips are in the test logs and Swift xUnit report.
+
+          | Coverage area | Status | Reason |
+          |---|---|---|
+          | Model metadata and management | Not covered | Module not implemented in Phase 0 |
+          | Downloader and download tasks | Not covered | Module not implemented in Phase 0 |
+          | Task transitions and resource rules | Not covered | Module not implemented in Phase 0 |
+          | API protocols | Not covered | Module not implemented in Phase 0 |
+          | Level 2 real inference | Not executed / not covered | No backend or verified tiny model integrated |
+          | Level 3 Apple Silicon GPU | Not executed / not covered | No MLX or Metal inference backend integrated; no GPU claim from CI |
+          | Level 4 multimodal end-to-end | Not executed / not covered | Modalities not implemented |
+          | Formal performance comparison | Not executed | Shared runners are not the performance baseline |
+
+          See Docs/Testing.md for the four test levels and real-hardware acceptance procedure.
+          REPORT
+          cat .tmp/ci/summary.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Save logs, unit test reports and App bundles
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: phase0-ci-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            .tmp/ci/
+            .tmp/reports/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14
